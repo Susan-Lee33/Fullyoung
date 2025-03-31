@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>富揚抽獎系統</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-top: 50px;
+            /* background-color: #f0f0f0; */
+            background: linear-gradient(to bottom right, #e0f7fa, #ffe0b2); /* 淡藍到淡橙漸層 */
+            min-height: 100vh; /* 確保漸層鋪滿 */
+        }
+        .container {
+            background-color: #ffffff;
+            padding: 30px;
+            border-radius: 12px; /* 增加圓角 */
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15); /* 加深陰影 */
+            text-align: center;
+            width: 90%; /* 限制最大寬度 */
+            max-width: 600px; /* 設定最大寬度 */
+        }
+        h1 {
+            color: #ff6f00; /* 橙色標題 */
+            margin-bottom: 25px;
+        }
+        #upload-form, #draw-form {
+            margin-bottom: 25px; /* 增加間距 */
+        }
+        input[type="file"], input[type="number"], button, select, textarea { /* 統一添加 select 和 textarea */
+            padding: 12px; /* 增加內邊距 */
+            margin: 8px; /* 調整外邊距 */
+            border-radius: 6px; /* 統一圓角 */
+            border: 1px solid #ccc;
+            font-size: 1em; /* 確保字體大小一致 */
+        }
+        textarea {
+            width: 80%; /* 讓文本區域寬一點 */
+        }
+        button {
+            /* background-color: #007bff; */
+            background: linear-gradient(to right, #1976d2, #64b5f6); /* 藍色漸層 */
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s ease; /* 過渡效果更平滑 */
+            border: none; /* 移除按鈕邊框 */
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+        button:hover {
+            /* background-color: #0056b3; */
+            background: linear-gradient(to right, #1565c0, #42a5f5); /* 加深漸層 */
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+            transform: translateY(-2px); /* 輕微上移效果 */
+        }
+        #results {
+            margin-top: 25px;
+            padding: 20px;
+            border: none; /* 移除邊框 */
+            background-color: #f1f8e9; /* 淡綠色背景 */
+            min-height: 50px;
+            border-radius: 8px; /* 圓角 */
+            text-align: left; /* 結果區文字靠左 */
+        }
+        #results h2 { /* 結果區標題樣式 */
+             text-align: center;
+             color: #33691e; /* 深綠色 */
+             margin-bottom: 15px;
+        }
+        .winner {
+            font-size: 1.6em; /* 稍微加大 */
+            font-weight: bold;
+            color: #ff4081; /* 亮粉色，更醒目 */
+            margin: 10px 0;
+            text-align: center; /* 得獎者名字置中 */
+        }
+        .error {
+            color: #d32f2f; /* 深紅色錯誤信息 */
+            font-weight: bold;
+        }
+        /* 抽獎動畫樣式 */
+        #animation-container {
+            margin-top: 30px;
+            width: 280px; /* 微調寬度 */
+            height: 120px; /* 微調高度 */
+            /* border: 3px solid #007bff; */
+            border: 5px solid;
+            border-image-slice: 1;
+            border-width: 5px;
+            border-image-source: linear-gradient(to left, #fbc02d, #ffeb3b); /* 黃色漸層邊框 */
+            border-radius: 10px; /* 增加圓角 */
+            position: relative;
+            overflow: hidden;
+            display: none;
+            background: linear-gradient(to bottom, #fafafa, #e0e0e0); /* 淺灰漸層背景 */
+            box-shadow: inset 0 0 12px rgba(0,0,0,0.25);
+            margin-bottom: 25px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        #names-list {
+            position: absolute;
+            top: 0;
+            left: 0; /* 改為靠左 */
+            width: 100%;
+            text-align: center;
+            /* 動畫由 JS 控制添加/移除 class */
+        }
+        /* 定義滾動動畫 */
+        @keyframes scrollNames {
+            0% {
+                transform: translateY(0);
+            }
+            100% {
+                /* 滾動的距離，需要根據名字列表的高度動態調整 */
+                /* JavaScript 會處理滾動的具體實現 */
+                transform: translateY(-100%); /* 暫定向上滾動一個列表高度 */
+            }
+        }
+        /* 應用動畫的 class */
+        .scrolling {
+            /* 這裡我們用 JS 控制更精確的動畫，CSS keyframes 效果有限 */
+             /* animation: scrollNames 0.1s linear infinite; */
+        }
+        .name-item {
+            font-size: 1.8em; /* 加大字體 */
+            font-weight: bold; /* 加粗 */
+            padding: 15px 0; /* 增加間距 */
+            white-space: nowrap; /* 避免換行 */
+            color: #333; /* 深色字體 */
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <img src="https://scontent.fkhh1-2.fna.fbcdn.net/v/t39.30808-6/296019134_165249399362677_459184875458113515_n.jpg?_nc_cat=104&ccb=1-7&_nc_sid=6ee11a&_nc_ohc=h3U9WIcptQIQ7kNvgF7jv05&_nc_oc=AdkT8IegOQBaaolkbdvYnYOlV9HuFR16N7Xs9VrhJIarIToNOMtnEicOneLDT-oRtf4&_nc_zt=23&_nc_ht=scontent.fkhh1-2.fna&_nc_gid=qCNXtkvb8GBQ9M0G38kn4g&oh=00_AYFIFk24LZVXKrDnbDNtRJx8w9mBxrRjol1bE9HwsoDwQQ&oe=67F0A350" alt="富揚 Logo" style="width: 20%; height: auto; margin-bottom: 15px;">
+        <h1>富揚抽獎系統</h1>
+
+        <div id="upload-form">
+            <h2>1. 貼上 Excel 名單</h2>
+            <p>請從 Excel 複製包含 "名字" 和 "抽獎次數" 的欄位 (包含或不含標題列)，貼到下方文字區。<br>每一行代表一個人，名字和次數之間用 Tab 分隔。</p>
+            <textarea id="paste-area" rows="10" cols="50" placeholder="在此貼上 Excel 資料..."></textarea><br>
+            <button onclick="loadPastedData()">載入資料</button>
+            <p id="upload-status"></p>
+        </div>
+
+        <div id="draw-form">
+            <h2>2. 開始抽獎</h2>
+            <label for="num-winners">每次抽出人數:</label>
+            <select id="num-winners">
+                <option value="1" selected>1</option>
+                <option value="2">2</option>
+            </select>
+            <button onclick="startDraw()">開始抽獎</button>
+            <p id="draw-status"></p>
+        </div>
+
+        <div id="animation-container">
+             <div id="names-list"></div>
+        </div>
+
+        <div id="results">
+            <h2>抽獎結果</h2>
+            <div id="winner-list"></div>
+            <p id="remaining-info"></p>
+        </div>
+    </div>
+
+    <script>
+        let participantsData = []; // 用於前端動畫顯示
+
+        async function loadPastedData() {
+            const pasteArea = document.getElementById('paste-area');
+            const uploadStatus = document.getElementById('upload-status');
+            uploadStatus.textContent = '處理中...';
+            uploadStatus.className = '';
+
+            const pastedText = pasteArea.value.trim();
+            if (!pastedText) {
+                uploadStatus.textContent = '請貼上資料。';
+                uploadStatus.className = 'error';
+                return;
+            }
+
+            try {
+                // 直接將原始文本發送到後端進行解析
+                const response = await fetch('/load_data', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ data: pastedText })
+                });
+                const result = await response.json();
+
+                if (response.ok) {
+                    uploadStatus.textContent = result.message;
+                    uploadStatus.className = '';
+                    participantsData = []; // 清空舊數據
+                    alert("資料載入成功！");
+                } else {
+                    uploadStatus.textContent = `錯誤: ${result.error}`;
+                    uploadStatus.className = 'error';
+                }
+            } catch (error) {
+                uploadStatus.textContent = `載入失敗: ${error}`;
+                uploadStatus.className = 'error';
+            }
+        }
+
+        async function startDraw() {
+            const numWinnersInput = document.getElementById('num-winners');
+            const drawStatus = document.getElementById('draw-status');
+            const winnerListDiv = document.getElementById('winner-list');
+            const remainingInfo = document.getElementById('remaining-info');
+            const animationContainer = document.getElementById('animation-container');
+            const namesListDiv = document.getElementById('names-list');
+
+            drawStatus.textContent = '';
+            drawStatus.className = '';
+            namesListDiv.innerHTML = ''; // 清空舊動畫元素
+            namesListDiv.style.transform = 'translateY(0)'; // 重設位置
+            animationContainer.style.display = 'block'; // 顯示動畫容器
+
+            const numWinners = parseInt(numWinnersInput.value);
+            if (isNaN(numWinners) || numWinners < 1 || numWinners > 2) {
+                drawStatus.textContent = '請輸入有效的抽獎人數 (1 或 2)。';
+                drawStatus.className = 'error';
+                animationContainer.style.display = 'none';
+                return;
+            }
+
+            let animationInterval = null;
+            let animationNames = [];
+            let currentY = 0;
+            let itemHeight = 0; // 每個名字項目的高度
+            let scrollSpeed = 50; // 初始滾動速度 (px/frame)
+            const deceleration = 0.5; // 減速度
+            let stopAnimation = false;
+
+            try {
+                // 先發起請求獲取結果和動畫名單
+                const response = await fetch('/draw', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ num_winners: numWinners })
+                });
+                const result = await response.json();
+
+                if (!response.ok) {
+                    drawStatus.textContent = `抽獎失敗: ${result.error}`;
+                    drawStatus.className = 'error';
+                    animationContainer.style.display = 'none';
+                    return;
+                }
+
+                // 獲取成功，準備動畫
+                animationNames = result.animation_names || [];
+                if (animationNames.length === 0) {
+                    drawStatus.textContent = '沒有可抽獎的參與者。';
+                    drawStatus.className = 'error';
+                    animationContainer.style.display = 'none';
+                    return;
+                }
+
+                // --- 設置動畫 --- 
+                // 填充名字列表，重複幾次以實現循環滾動效果
+                const listMultiplier = Math.max(5, Math.ceil(50 / animationNames.length)); // 至少重複5次或總數約50個
+                let listHTML = '';
+                for (let i = 0; i < listMultiplier; i++) {
+                    animationNames.forEach(name => {
+                        listHTML += `<div class="name-item">${name}</div>`;
+                    });
+                }
+                namesListDiv.innerHTML = listHTML;
+
+                // 計算單個項目高度 (需要確保 CSS 已加載且元素已渲染)
+                const firstItem = namesListDiv.querySelector('.name-item');
+                if (!firstItem) throw new Error("無法獲取 name-item 元素");
+                itemHeight = firstItem.offsetHeight; // 包含 padding
+
+                const totalHeight = itemHeight * animationNames.length * listMultiplier;
+                const singleLoopHeight = itemHeight * animationNames.length; // 一輪的高度
+
+                function animateScroll() {
+                    if (stopAnimation) {
+                        // 緩慢停止到最終位置 (這裡簡化，直接停止)
+                        // 可以添加更平滑的停止邏輯，例如對準某個名字
+                        animationContainer.style.display = 'none'; // 隱藏動畫
+                        displayWinners(result); // 顯示結果
+                        return;
+                    }
+
+                    currentY -= scrollSpeed;
+
+                    // 如果滾動超過一輪的高度，重置位置以達到無限滾動效果
+                    if (Math.abs(currentY) >= singleLoopHeight) {
+                         currentY += singleLoopHeight;
+                    }
+
+                    namesListDiv.style.transform = `translateY(${currentY}px)`;
+
+                    // 逐漸減速 (僅在抽獎結束後觸發減速)
+                    // scrollSpeed = Math.max(1, scrollSpeed - deceleration); 
+
+                    animationInterval = requestAnimationFrame(animateScroll); // 使用 requestAnimationFrame 以獲得更流暢的動畫
+                }
+
+                // 啟動動畫
+                animateScroll();
+
+                // 設置一個計時器，在一段時間後開始減速並停止動畫
+                setTimeout(() => {
+                    stopAnimation = true; // 設置停止標誌
+                    // 實際停止會在下一幀 animateScroll 檢測到 stopAnimation 時發生
+                }, 3000); // 動畫持續 3 秒
+
+            } catch (error) {
+                if (animationInterval) cancelAnimationFrame(animationInterval);
+                animationContainer.style.display = 'none';
+                drawStatus.textContent = `抽獎動畫或過程中發生錯誤: ${error}`;
+                drawStatus.className = 'error';
+                console.error("抽獎錯誤:", error);
+            }
+        }
+
+        function displayWinners(result) {
+            const winnerListDiv = document.getElementById('winner-list');
+            const remainingInfo = document.getElementById('remaining-info');
+
+            // 創建一個新的 div 來存放這次抽獎的結果
+            const drawResultBlock = document.createElement('div');
+            drawResultBlock.style.marginTop = '15px'; // 添加一些間隔
+            drawResultBlock.style.paddingTop = '15px';
+            drawResultBlock.style.borderTop = '1px solid #ccc'; // 添加分隔線
+
+            const heading = document.createElement('h3');
+            heading.textContent = '恭喜得獎者：';
+            drawResultBlock.appendChild(heading);
+
+            if (result.winners && result.winners.length > 0) {
+                result.winners.forEach(winner => {
+                    const winnerElement = document.createElement('p');
+                    winnerElement.textContent = winner;
+                    winnerElement.className = 'winner';
+                    drawResultBlock.appendChild(winnerElement); // 添加到新的區塊中
+                });
+            } else {
+                 const noWinnerElement = document.createElement('p');
+                 noWinnerElement.textContent = '沒有抽出得獎者。';
+                 drawResultBlock.appendChild(noWinnerElement); // 添加到新的區塊中
+            }
+
+            // 將剩餘人數信息也添加到這次的結果區塊中
+            const remainingElement = document.createElement('p');
+            remainingElement.textContent = `剩餘抽獎機會: ${result.remaining_participants_count}`;
+            drawResultBlock.appendChild(remainingElement);
+
+            // 將這次的結果區塊附加到主結果列表的末尾
+            winnerListDiv.appendChild(drawResultBlock);
+        }
+    </script>
+</body>
+</html> 
