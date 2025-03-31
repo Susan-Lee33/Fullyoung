@@ -2,14 +2,40 @@ from flask import Flask, render_template, request, jsonify
 import pandas as pd
 import random
 import io
+import os  # 引入 os 模組以處理環境變數
+import sys
+import logging
 
-app = Flask(__name__)
+# 設置日誌記錄
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    stream=sys.stdout
+)
+
+# 取得應用程式根目錄
+root_dir = os.path.dirname(os.path.abspath(__file__))
+template_dir = os.path.join(root_dir, 'templates')
+
+# 確保模板目錄存在
+if not os.path.exists(template_dir):
+    os.makedirs(template_dir)
+    logging.warning(f"Created missing template directory: {template_dir}")
+
+app = Flask(
+    __name__,
+    template_folder=template_dir  # 明確指定模板資料夾
+)
 
 participants = []
 
 @app.route('/')
 def index():
-    return render_template('index.html')
+    try:
+        return render_template('index.html')
+    except Exception as e:
+        logging.error(f"Error rendering index: {e}")
+        return f"Error loading template: {str(e)}", 500
 
 @app.route('/load_data', methods=['POST'])
 def load_data():
@@ -126,6 +152,9 @@ def draw_winners():
     })
 
 if __name__ == '__main__':
-    # app.run(debug=True, port=5001) # 開發模式
-    app.run() # 生產模式下由 Gunicorn 等伺服器管理，這行其實不會被 Gunicorn 執行，但保留無害
+    # 本地開發時使用的代碼
+    # app.run(debug=True, port=5001)
+    # 生產環境下使用以下代碼
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port)
     
